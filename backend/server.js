@@ -4,6 +4,7 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 mongoose.connect('mongodb://localhost:27017/nexus_banca')
   .then(() => console.log('Conectado a MongoDB'))
@@ -28,11 +29,12 @@ const Transaccion = mongoose.model('Transaccion', new mongoose.Schema({
   fecha: Date
 }));
 
+//GET Consultar cuenta
 app.get('/api/cuenta/:cuenta', async (req, res) => {
   try {
     const cuentaId = parseInt(req.params.cuenta);
     const cuenta = await Cuenta.findById(cuentaId);
-    if (!cuenta) return res.status(404).send('Cuenta no encontrada');
+    if (!cuenta) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
     const cliente = await Cliente.findById(cuenta.idCliente);
     const transacciones = await Transaccion.find({ idCuenta: cuentaId });
@@ -44,7 +46,61 @@ app.get('/api/cuenta/:cuenta', async (req, res) => {
     });
   } catch (err) {
     console.error('Error en /api/cuenta:', err);
-    res.status(500).send('Error interno en el servidor');
+    res.status(500).json({ error: 'Error interno en el servidor' });
+  }
+});
+
+//POST Realizar deposito
+app.post('/api/deposito', async (req, res) => {
+  const { cuentaId, monto } = req.body;
+
+  try {
+    const cuenta = await Cuenta.findById(cuentaId);
+    if (!cuenta) return res.status(404).json({ error: 'Cuenta no encontrada' });
+
+    cuenta.saldo += monto;
+    await cuenta.save();
+
+    await Transaccion.create({
+      idCuenta: cuentaId,
+      tipo: 'deposito',
+      monto,
+      fecha: new Date()
+    });
+
+    res.json({ mensaje: 'Depósito exitoso', nuevoSaldo: cuenta.saldo });
+  } catch (err) {
+    console.error('Error en /api/deposito:', err);
+    res.status(500).json({ error: 'Error al realizar el depósito' });
+  }
+});
+
+//POST Realizar retiro
+app.post('/api/retiro', async (req, res) => {
+  const { cuentaId, monto } = req.body;
+
+  try {
+    const cuenta = await Cuenta.findById(cuentaId);
+    if (!cuenta) return res.status(404).json({ error: 'Cuenta no encontrada' });
+
+    if (cuenta.saldo < monto) {
+      return res.status(400).json({ error: 'Fondos insuficientes' });
+    }
+
+    cuenta.saldo -= monto;
+    await cuenta.save();
+
+    await Transaccion.create({
+      idCuenta: cuentaId,
+      tipo: 'retiro',
+      monto,
+      fecha: new Date()
+    });
+
+    res.json({ mensaje: 'Retiro exitoso', nuevoSaldo: cuenta.saldo });
+  } catch (err) {
+    console.error('Error en /api/retiro:', err);
+    res.status(500).json({ error: 'Error al realizar el retiro' });
   }
 });
 

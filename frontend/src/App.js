@@ -2,29 +2,108 @@ import React, { useState } from 'react';
 
 function App() {
   const [cuenta, setCuenta] = useState('');
+  const [monto, setMonto] = useState('');
   const [datos, setDatos] = useState(null);
+  const [mensaje, setMensaje] = useState('');
 
   const consultar = async () => {
-    const res = await fetch(`http://localhost:3000/api/cuenta/${cuenta}`);
-    const json = await res.json();
-    setDatos(json);
+    try {
+      const res = await fetch(`http://localhost:3000/api/cuenta/${cuenta}`);
+      const json = await res.json();
+      if (json.error) {
+        setMensaje(json.error);
+        setDatos(null);
+      } else {
+        setDatos(json);
+        setMensaje('');
+      }
+    } catch (err) {
+      console.error(err);
+      setMensaje('Error al consultar la cuenta.');
+    }
+  };
+
+  const realizarOperacion = async (tipo) => {
+    if (!cuenta || !monto) {
+      setMensaje('Debes ingresar un número de cuenta y un monto válido.');
+      return;
+    }
+
+    const url = tipo === 'deposito' ? '/api/deposito' : '/api/retiro';
+    try {
+      const res = await fetch(`http://localhost:3000${url}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cuentaId: parseInt(cuenta),
+          monto: parseFloat(monto)
+        })
+      });
+
+      const data = await res.json();
+      setMensaje(data.mensaje || data.error);
+      consultar();
+    } catch (err) {
+      console.error(err);
+      setMensaje('Error en la operación.');
+    }
   };
 
   return (
-    <div>
-      <h1>Banco Nexus</h1>
-      <input placeholder="Número de cuenta" onChange={e => setCuenta(e.target.value)} />
-      <button onClick={consultar}>Consultar</button>
+    <div style={{ maxWidth: '500px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
+      <h1 style={{ textAlign: 'center', color: '#4a90e2' }}>Banco Nexus</h1>
+
+      <div style={{ marginBottom: '1em' }}>
+        <input
+          type="number"
+          placeholder="Número de cuenta"
+          value={cuenta}
+          onChange={e => setCuenta(e.target.value)}
+          style={{ width: '100%', padding: '8px', marginBottom: '0.5em' }}
+        />
+        <button onClick={consultar} style={{ width: '100%', padding: '10px', backgroundColor: '#4a90e2', color: 'white', border: 'none', cursor: 'pointer' }}>
+          Consultar cuenta
+        </button>
+      </div>
+
       {datos && (
-        <div>
+        <div style={{ background: '#f0f0f0', padding: '1em', borderRadius: '8px' }}>
           <p><strong>Nombre:</strong> {datos.nombre}</p>
-          <p><strong>Saldo:</strong> ${datos.saldo}</p>
+          <p><strong>Saldo:</strong> ${datos.saldo.toFixed(2)}</p>
+          <h4>Movimientos:</h4>
           <ul>
             {datos.transacciones.map((t, i) => (
-              <li key={i}>{t.tipo} de ${t.monto} el {new Date(t.fecha).toLocaleDateString()}</li>
+              <li key={i}>
+                {t.tipo} de ${t.monto} el {new Date(t.fecha).toLocaleDateString()}
+              </li>
             ))}
           </ul>
         </div>
+      )}
+
+      <div style={{ marginTop: '2em' }}>
+        <h3>Operaciones Bancarias</h3>
+        <input
+          type="number"
+          placeholder="Monto"
+          value={monto}
+          onChange={e => setMonto(e.target.value)}
+          style={{ width: '100%', padding: '8px', marginBottom: '0.5em' }}
+        />
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => realizarOperacion('deposito')} style={{ flex: 1, padding: '10px', backgroundColor: '#27ae60', color: 'white', border: 'none', cursor: 'pointer' }}>
+            Depositar
+          </button>
+          <button onClick={() => realizarOperacion('retiro')} style={{ flex: 1, padding: '10px', backgroundColor: '#c0392b', color: 'white', border: 'none', cursor: 'pointer' }}>
+            Retirar
+          </button>
+        </div>
+      </div>
+
+      {mensaje && (
+        <p style={{ marginTop: '1em', color: mensaje.includes('error') || mensaje.includes('Error') ? 'red' : 'green' }}>
+          {mensaje}
+        </p>
       )}
     </div>
   );
