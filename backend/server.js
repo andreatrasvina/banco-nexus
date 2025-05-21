@@ -7,7 +7,7 @@ app.use(cors());
 
 mongoose.connect('mongodb://localhost:27017/nexus_banca')
   .then(() => console.log('Conectado a MongoDB'))
-  .catch(err => console.error(err));
+  .catch(err => console.error('Error conectando a MongoDB:', err));
 
 const Cuenta = mongoose.model('Cuenta', new mongoose.Schema({
   _id: Number,
@@ -29,18 +29,25 @@ const Transaccion = mongoose.model('Transaccion', new mongoose.Schema({
 }));
 
 app.get('/api/cuenta/:cuenta', async (req, res) => {
-  const cuentaId = parseInt(req.params.cuenta);
-  const cuenta = await Cuenta.findById(cuentaId);
-  if (!cuenta) return res.status(404).send('Cuenta no encontrada');
+  try {
+    const cuentaId = parseInt(req.params.cuenta);
+    const cuenta = await Cuenta.findById(cuentaId);
+    if (!cuenta) return res.status(404).send('Cuenta no encontrada');
 
-  const cliente = await Cliente.findById(cuenta.idCliente);
-  const transacciones = await Transaccion.find({ idCuenta: cuentaId });
+    const cliente = await Cliente.findById(cuenta.idCliente);
+    const transacciones = await Transaccion.find({ idCuenta: cuentaId });
 
-  res.json({
-    nombre: cliente.nombre,
-    saldo: cuenta.saldo,
-    transacciones
-  });
+    res.json({
+      nombre: cliente?.nombre ?? "Desconocido",
+      saldo: cuenta.saldo,
+      transacciones
+    });
+  } catch (err) {
+    console.error('Error en /api/cuenta:', err);
+    res.status(500).send('Error interno en el servidor');
+  }
 });
 
-app.listen(3000, () => console.log('Servidor escuchando en puerto 3000'));
+app.listen(3000, () => {
+  console.log('Backend escuchando en http://localhost:3000');
+});
