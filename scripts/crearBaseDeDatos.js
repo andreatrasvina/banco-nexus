@@ -49,6 +49,7 @@ async function run() {
       idCuenta: cuenta._id,
       tipo: 'deposito',
       monto: cuenta.saldo,
+      sucursal: 'CDMX',
       fecha: new Date()
     }));
 

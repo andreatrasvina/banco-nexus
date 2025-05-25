@@ -5,6 +5,8 @@ function App() {
   const [monto, setMonto] = useState('');
   const [datos, setDatos] = useState(null);
   const [mensaje, setMensaje] = useState('');
+  const [sucursal, setSucursal] = useState('');
+  const [historial, setHistorial] = useState([]);
 
   const consultar = async () => {
     try {
@@ -24,8 +26,8 @@ function App() {
   };
 
   const realizarOperacion = async (tipo) => {
-    if (!cuenta || !monto) {
-      setMensaje('Debes ingresar un número de cuenta y un monto válido.');
+    if (!cuenta || !monto || !sucursal) {
+      setMensaje('Debes ingresar cuenta, monto y seleccionar sucursal.');
       return;
     }
 
@@ -36,16 +38,42 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cuentaId: parseInt(cuenta),
-          monto: parseFloat(monto)
+          monto: parseFloat(monto),
+          sucursal: sucursal || 'SucursalDesconocida'
         })
       });
 
       const data = await res.json();
       setMensaje(data.mensaje || data.error);
       consultar();
+      consultarHistorial();
+      
     } catch (err) {
       console.error(err);
       setMensaje('Error en la operación.');
+    }
+  };
+
+  const consultarHistorial = async () => {
+    if (!cuenta || isNaN(parseInt(cuenta))) {
+      setMensaje('Ingresa un número de cuenta válido para ver historial.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/historial/${cuenta}`);
+      const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        setMensaje(data.error || 'Error al obtener historial');
+        return;
+      }
+
+      setHistorial(data);
+      setMensaje('');
+    } catch (err) {
+      console.error(err);
+      setMensaje('Error al obtener historial.');
     }
   };
 
@@ -61,9 +89,28 @@ function App() {
           onChange={e => setCuenta(e.target.value)}
           style={{ width: '100%', padding: '8px', marginBottom: '0.5em' }}
         />
-        <button onClick={consultar} style={{ width: '100%', padding: '10px', backgroundColor: '#4a90e2', color: 'white', border: 'none', cursor: 'pointer' }}>
+        <button
+          onClick={consultar}
+          style={{ width: '100%', padding: '10px', backgroundColor: '#4a90e2', color: 'white', border: 'none', cursor: 'pointer' }}
+        >
           Consultar cuenta
         </button>
+
+        <button
+          onClick={consultarHistorial}
+          style={{
+            width: '100%',
+            padding: '10px',
+            marginTop: '0.5em',
+            backgroundColor: '#666',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          Ver historial detallado
+        </button>
+
       </div>
 
       {datos && (
@@ -81,8 +128,33 @@ function App() {
         </div>
       )}
 
+      {historial.length > 0 && (
+        <div style={{ marginTop: '1em', backgroundColor: '#e8f0ff', padding: '1em', borderRadius: '8px' }}>
+          <h4>Historial detallado</h4>
+          <ul>
+            {historial.map((t, i) => (
+              <li key={i}>
+                {t.tipo} de ${t.monto} en {t.sucursal || 'Sucursal desconocida'} - {new Date(t.fecha).toLocaleString()}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div style={{ marginTop: '2em' }}>
         <h3>Operaciones Bancarias</h3>
+
+        <select
+          onChange={e => setSucursal(e.target.value)}
+          value={sucursal}
+          style={{ width: '100%', padding: '8px', marginBottom: '0.5em' }}
+        >
+          <option value="">Selecciona sucursal</option>
+          <option value="CDMX">CDMX</option>
+          <option value="GDL">GDL</option>
+          <option value="MTY">MTY</option>
+        </select>
+
         <input
           type="number"
           placeholder="Monto"

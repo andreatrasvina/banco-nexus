@@ -26,10 +26,11 @@ const Transaccion = mongoose.model('Transaccion', new mongoose.Schema({
   idCuenta: Number,
   tipo: String,
   monto: Number,
+  sucursal: String,
   fecha: Date
 }));
 
-//GET Consultar cuenta
+//GET server.js cuenta
 app.get('/api/cuenta/:cuenta', async (req, res) => {
   try {
     const cuentaId = parseInt(req.params.cuenta);
@@ -65,6 +66,7 @@ app.post('/api/deposito', async (req, res) => {
       idCuenta: cuentaId,
       tipo: 'deposito',
       monto,
+      sucursal: req.body.sucursal || 'SucursalDesconocida',
       fecha: new Date()
     });
 
@@ -94,6 +96,7 @@ app.post('/api/retiro', async (req, res) => {
       idCuenta: cuentaId,
       tipo: 'retiro',
       monto,
+      sucursal: req.body.sucursal || 'SucursalDesconocida',
       fecha: new Date()
     });
 
@@ -101,6 +104,18 @@ app.post('/api/retiro', async (req, res) => {
   } catch (err) {
     console.error('Error en /api/retiro:', err);
     res.status(500).json({ error: 'Error al realizar el retiro' });
+  }
+});
+
+//GET Historial
+app.get('/api/historial/:cuenta', async (req, res) => {
+  try {
+    const cuentaId = parseInt(req.params.cuenta);
+    const historial = await Transaccion.find({ idCuenta: cuentaId });
+    res.json(historial);
+  } catch (err) {
+    console.error('Error en /api/historial:', err);
+    res.status(500).json({ error: 'Error consultando historial' });
   }
 });
 
