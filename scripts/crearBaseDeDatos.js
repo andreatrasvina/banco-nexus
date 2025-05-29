@@ -1,6 +1,6 @@
 const { MongoClient } = require('mongodb');
 
-const uri = 'mongodb://localhost:27017';
+const uri = 'mongodb://localhost:27018,localhost:27019,localhost:27020/nexus_banca?replicaSet=rsBanco';
 const client = new MongoClient(uri);
 
 async function run() {

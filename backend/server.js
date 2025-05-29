@@ -6,9 +6,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect('mongodb://localhost:27017/nexus_banca')
+mongoose.connect('mongodb://localhost:27018,localhost:27019,localhost:27020/nexus_banca?replicaSet=rsBanco', {
+useNewUrlParser: true,
+useUnifiedTopology: true
+})
   .then(() => console.log('Conectado a MongoDB'))
   .catch(err => console.error('Error conectando a MongoDB:', err));
+
+mongoose.connection.on('connected', () => {
+console.log('✅ Conectado a MongoDB Replica Set');
+});
+
+mongoose.connection.on('error', (err) => {
+console.error('❌ Error de conexión a MongoDB:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+console.warn('⚠️ Desconectado de MongoDB. Intentando reconectar...');
+});
 
 const Cuenta = mongoose.model('Cuenta', new mongoose.Schema({
   _id: Number,
