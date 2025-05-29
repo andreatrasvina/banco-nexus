@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect('mongodb://localhost:27018,localhost:27019,localhost:27020/nexus_banca?replicaSet=rsBanco', {
+mongoose.connect('mongodb://25.2.241.5:27017,25.46.76.99:27017,25.46.98.6:27017/nexus_banca?replicaSet=rsBanco', {
 useNewUrlParser: true,
 useUnifiedTopology: true
 })
